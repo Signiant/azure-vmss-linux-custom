@@ -1,0 +1,242 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01-preview/deploymentTemplate.json",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "resourceLocation":{
+        "type":"string",
+        "allowedValues":[
+          "East US",
+          "East US 2",
+          "West US",
+          "Central US",
+          "South Central US",
+           "North Central US",
+          "North Europe",
+          "West Europe",
+          "Southeast Asia",
+          "East Asia",
+          "Japan West",
+          "Japan East",
+          "Brazil South",
+          "Australia East",
+          "Australia Southeast"
+        ],
+        "metadata":{
+          "description":"Azure region where all resources will be deployed. This is distinct from resource group location."
+        }
+      },
+        "vmSSName": {
+            "type": "string"
+        },
+        "instanceCount": {
+            "type": "string",
+            "metadata": {
+                "description": "Number of VM instances"
+            }
+        },
+        "adminUsername": {
+            "type": "string"
+        },
+        "adminPassword": {
+            "type": "securestring"
+        }
+    },
+    "variables": {
+        "addressPrefix": "10.0.0.0/16",
+        "subnetName": "subnet",
+        "subnetPrefix": "10.0.0.0/24",
+        "virtualNetworkName": "vmssvnet",
+        "publicIPAddressNameLB":"[concat(parameters('vmSSName'), 'piplb')]",
+        "publicIPAddressID":"[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressNameLB'))]",
+        "loadBalancerName":"[concat(parameters('vmSSName'), 'lb')]",
+        "lbID":"[resourceId('Microsoft.Network/loadBalancers',variables('loadBalancerName'))]",
+        "natPoolName":"[concat(parameters('vmSSName'), 'natpool')]",
+        "bePoolName":"[concat(parameters('vmSSName'), 'bepool')]",
+        "newStorageAccountSuffix":"[concat(parameters('vmSSName'), 'store')]",
+        "sourceImageVhdUri": "https://packercentos71.blob.core.windows.net/images/Packer_Centos7_2016-01-19_13-01-os-2016-01-19.vhd",
+        "natStartPort":50000,
+        "natEndPort":50099,
+        "natBackendPort":22,
+        "namingInfix": "[toLower(parameters('vmSSName'))]",
+        "nicName":"[concat(parameters('vmSSName'), 'nic')]",
+        "ipConfigName":"[concat(parameters('vmSSName'), 'ipconfig')]",
+        "frontEndIPConfigID":"[concat(variables('lbID'),'/frontendIPConfigurations/loadBalancerFrontEnd')]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[variables('virtualNetworkName')]",
+            "location": "[parameters('resourceLocation')]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[variables('addressPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('subnetName')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnetPrefix')]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+          "type":"Microsoft.Network/publicIPAddresses",
+          "name":"[variables('publicIPAddressNameLB')]",
+          "location":"[parameters('resourceLocation')]",
+          "apiVersion": "2015-04-01",
+          "properties":{
+            "publicIPAllocationMethod":"Dynamic",
+            "dnsSettings":{
+              "domainNameLabel":"vmlb"
+            }
+          }
+        },
+        {
+          "type":"Microsoft.Network/loadBalancers",
+          "name":"[variables('loadBalancerName')]",
+          "location":"[parameters('resourceLocation')]",
+          "apiVersion": "2015-04-01",
+          "dependsOn":[
+            "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressNameLB'))]"
+          ],
+          "properties":{
+            "frontendIPConfigurations":[
+              {
+                "name":"LoadBalancerFrontEnd",
+                "properties":{
+                  "publicIPAddress":{
+                    "id":"[variables('publicIPAddressID')]"
+                  }
+                }
+              }
+            ],
+            "backendAddressPools":[
+              {
+                "name":"[variables('bePoolName')]"
+              }
+            ],
+            "inboundNatPools":[
+              {
+                "name":"[variables('natPoolName')]",
+                "properties":{
+                  "frontendIPConfiguration":{
+                    "id":"[variables('frontEndIPConfigID')]"
+                  },
+                  "protocol":"tcp",
+                  "frontendPortRangeStart":"[variables('natStartPort')]",
+                  "frontendPortRangeEnd":"[variables('natEndPort')]",
+                  "backendPort":"[variables('natBackendPort')]"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "Microsoft.Insights/autoscaleSettings",
+          "apiVersion": "2015-04-01",
+          "name": "autoscalewad",
+          "location":"[parameters('resourceLocation')]",
+          "dependsOn": [
+            "[concat('Microsoft.Compute/virtualMachineScaleSets/', parameters('vmSSName'))]"
+          ],
+          "properties": {
+            "name": "autoscalewad",
+            "targetResourceUri": "[concat('/subscriptions/',subscription().subscriptionId, '/resourceGroups/',  resourceGroup().name, '/providers/Microsoft.Compute/virtualMachineScaleSets/', parameters('vmSSName'))]",
+            "enabled": true,
+            "profiles": [
+              {
+                "name": "Profile1",
+                "capacity": {
+                  "minimum": "2",
+                  "maximum": "40",
+                  "default": "1"
+                },
+                "rules": [
+                  {
+                    "metricTrigger": {
+                      "metricName": "\\Processor\\PercentProcessorTime",
+                      "metricNamespace": "",
+                      "metricResourceUri": "[concat('/subscriptions/',subscription().subscriptionId, '/resourceGroups/',  resourceGroup().name, '/providers/Microsoft.Compute/virtualMachineScaleSets/', parameters('vmSSName'))]",
+                      "timeGrain": "PT1M",
+                      "statistic": "Average",
+                      "timeWindow": "PT5M",
+                      "timeAggregation": "Average",
+                      "operator": "GreaterThan",
+                      "threshold": 30.0
+                    },
+                    "scaleAction": {
+                      "direction": "Increase",
+                      "type": "ChangeCount",
+                      "value": "1",
+                      "cooldown": "PT1M"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachineScaleSets",
+            "apiVersion": "2015-06-15",
+            "name": "[parameters('vmSSName')]",
+            "location": "[parameters('resourceLocation')]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]",
+                "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
+            ],
+            "sku": {
+                "name": "Standard_A2",
+                "tier": "Standard",
+                "capacity": "[parameters('instanceCount')]"
+            },
+            "properties": {
+                "upgradePolicy": {
+                    "mode": "Manual"
+                },
+                "virtualMachineProfile": {
+                    "storageProfile": {
+                        "osDisk": {
+                            "name": "vmssosdisk",
+                            "caching": "ReadOnly",
+                            "createOption": "FromImage",
+                            "osType": "Linux",
+                            "image": {
+                                "uri": "[variables('sourceImageVhdUri')]"
+                            }
+                        }
+                    },
+                    "osProfile": {
+                        "computerNamePrefix": "[parameters('vmSSName')]",
+                        "adminUsername": "[parameters('adminUsername')]",
+                        "adminPassword": "[parameters('adminPassword')]"
+                    },
+                    "networkProfile": {
+                        "networkInterfaceConfigurations": [
+                            {
+                                "name": "nic1",
+                                "properties": {
+                                    "primary": "true",
+                                    "ipConfigurations": [
+                                        {
+                                            "name": "ip1",
+                                            "properties": {
+                                                "subnet": {
+                                                    "id": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'), '/subnets/', variables('subnetName'))]"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    ]
