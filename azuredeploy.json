@@ -34,6 +34,12 @@
                 "description": "Number of VM instances"
             }
         },
+        "sourceImageVhdUri":{
+            "type": "string",
+            "metadata": {
+                "description": "URI of Image VHD"
+            }
+        },        
         "adminUsername": {
             "type": "string"
         },
@@ -53,7 +59,6 @@
         "natPoolName":"[concat(parameters('vmSSName'), 'natpool')]",
         "bePoolName":"[concat(parameters('vmSSName'), 'bepool')]",
         "newStorageAccountSuffix":"[concat(parameters('vmSSName'), 'store')]",
-        "sourceImageVhdUri": "https://packercentos71.blob.core.windows.net/images/Packer_Centos7_2016-01-19_13-01-os-2016-01-19.vhd",
         "natStartPort":50000,
         "natEndPort":50099,
         "natBackendPort":22,
