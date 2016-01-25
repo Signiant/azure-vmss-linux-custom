@@ -9,4 +9,4 @@ This template allows you to deploy an autoscaled VM Scale Set of Linux VMs based
 PARAMETER RESTRICTIONS
 ======================
 
-VM and VMSS names must be 9 characters in length or shorter. It should also be globally unique across all of Azure.
+VM and VMSS names must be 9 characters in length or shorter. It should also be globally unique across all of Azure. VHD file should be in same region and subscription.
