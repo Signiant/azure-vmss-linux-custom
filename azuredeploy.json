@@ -5,21 +5,9 @@
       "resourceLocation": {
         "type":"string",
         "allowedValues":[
-          "East US",
-          "East US 2",
-          "West US",
-          "Central US",
-          "South Central US",
-           "North Central US",
-          "North Europe",
-          "West Europe",
-          "Southeast Asia",
-          "East Asia",
-          "Japan West",
-          "Japan East",
-          "Brazil South",
-          "Australia East",
-          "Australia Southeast"
+          "eastus",
+          "westus",
+          "northeurope"
         ],
         "metadata":{
           "description":"Azure region where all resources will be deployed. This is distinct from resource group location."
@@ -48,6 +36,7 @@
         }
     },
     "variables": {
+        "apiVersion":"2015-06-15",
         "addressPrefix": "10.0.0.0/16",
         "subnetName": "subnet",
         "subnetPrefix": "10.0.0.0/24",
@@ -69,7 +58,7 @@
     },
     "resources": [
         {
-            "apiVersion": "2015-06-15",
+            "apiVersion": "[variables('apiVersion')]",
             "type": "Microsoft.Network/virtualNetworks",
             "name": "[variables('virtualNetworkName')]",
             "location": "[parameters('resourceLocation')]",
@@ -93,7 +82,7 @@
           "type":"Microsoft.Network/publicIPAddresses",
           "name":"[variables('publicIPAddressNameLB')]",
           "location":"[parameters('resourceLocation')]",
-          "apiVersion": "2015-04-01",
+          "apiVersion": "[variables('apiVersion')]",
           "properties":{
             "publicIPAllocationMethod":"Dynamic",
             "dnsSettings":{
@@ -105,7 +94,7 @@
           "type":"Microsoft.Network/loadBalancers",
           "name":"[variables('loadBalancerName')]",
           "location":"[parameters('resourceLocation')]",
-          "apiVersion": "2015-04-01",
+          "apiVersion": "[variables('apiVersion')]",
           "dependsOn":[
             "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressNameLB'))]"
           ],
@@ -159,7 +148,7 @@
                 "capacity": {
                   "minimum": "2",
                   "maximum": "40",
-                  "default": "1"
+                  "default": "2"
                 },
                 "rules": [
                   {
@@ -178,7 +167,7 @@
                       "direction": "Increase",
                       "type": "ChangeCount",
                       "value": "1",
-                      "cooldown": "PT1M"
+                      "cooldown": "PT5M"
                     }
                   }
                 ]
@@ -188,7 +177,7 @@
         },
         {
             "type": "Microsoft.Compute/virtualMachineScaleSets",
-            "apiVersion": "2015-06-15",
+            "apiVersion": "[variables('apiVersion')]",
             "name": "[parameters('vmssName')]",
             "location": "[parameters('resourceLocation')]",
             "dependsOn": [
@@ -212,7 +201,7 @@
                             "createOption": "FromImage",
                             "osType": "Linux",
                             "image": {
-                                "uri": "[variables('sourceImageVhdUri')]"
+                                "uri": "[parameters('sourceImageVhdUri')]"
                             }
                         }
                     },
