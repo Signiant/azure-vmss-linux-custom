@@ -2,7 +2,7 @@
     "$schema": "http://schema.management.azure.com/schemas/2015-01-01-preview/deploymentTemplate.json",
     "contentVersion": "1.0.0.0",
     "parameters": {
-      "resourceLocation":{
+      "resourceLocation": {
         "type":"string",
         "allowedValues":[
           "East US",
@@ -25,7 +25,7 @@
           "description":"Azure region where all resources will be deployed. This is distinct from resource group location."
         }
       },
-        "vmSSName": {
+        "vmssName": {
             "type": "string"
         },
         "instanceCount": {
@@ -34,12 +34,12 @@
                 "description": "Number of VM instances"
             }
         },
-        "sourceImageVhdUri":{
+        "sourceImageVhdUri": {
             "type": "string",
             "metadata": {
                 "description": "URI of Image VHD"
             }
-        },        
+        },
         "adminUsername": {
             "type": "string"
         },
@@ -52,19 +52,19 @@
         "subnetName": "subnet",
         "subnetPrefix": "10.0.0.0/24",
         "virtualNetworkName": "vmssvnet",
-        "publicIPAddressNameLB":"[concat(parameters('vmSSName'), 'piplb')]",
+        "publicIPAddressNameLB":"[concat(parameters('vmssName'), 'piplb')]",
         "publicIPAddressID":"[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressNameLB'))]",
-        "loadBalancerName":"[concat(parameters('vmSSName'), 'lb')]",
+        "loadBalancerName":"[concat(parameters('vmssName'), 'lb')]",
         "lbID":"[resourceId('Microsoft.Network/loadBalancers',variables('loadBalancerName'))]",
-        "natPoolName":"[concat(parameters('vmSSName'), 'natpool')]",
-        "bePoolName":"[concat(parameters('vmSSName'), 'bepool')]",
-        "newStorageAccountSuffix":"[concat(parameters('vmSSName'), 'store')]",
+        "natPoolName":"[concat(parameters('vmssName'), 'natpool')]",
+        "bePoolName":"[concat(parameters('vmssName'), 'bepool')]",
+        "newStorageAccountSuffix":"[concat(parameters('vmssName'), 'store')]",
         "natStartPort":50000,
         "natEndPort":50099,
         "natBackendPort":22,
-        "namingInfix": "[toLower(parameters('vmSSName'))]",
-        "nicName":"[concat(parameters('vmSSName'), 'nic')]",
-        "ipConfigName":"[concat(parameters('vmSSName'), 'ipconfig')]",
+        "namingInfix": "[toLower(parameters('vmssName'))]",
+        "nicName":"[concat(parameters('vmssName'), 'nic')]",
+        "ipConfigName":"[concat(parameters('vmssName'), 'ipconfig')]",
         "frontEndIPConfigID":"[concat(variables('lbID'),'/frontendIPConfigurations/loadBalancerFrontEnd')]"
     },
     "resources": [
@@ -147,11 +147,11 @@
           "name": "autoscalewad",
           "location":"[parameters('resourceLocation')]",
           "dependsOn": [
-            "[concat('Microsoft.Compute/virtualMachineScaleSets/', parameters('vmSSName'))]"
+            "[concat('Microsoft.Compute/virtualMachineScaleSets/', parameters('vmssName'))]"
           ],
           "properties": {
             "name": "autoscalewad",
-            "targetResourceUri": "[concat('/subscriptions/',subscription().subscriptionId, '/resourceGroups/',  resourceGroup().name, '/providers/Microsoft.Compute/virtualMachineScaleSets/', parameters('vmSSName'))]",
+            "targetResourceUri": "[concat('/subscriptions/',subscription().subscriptionId, '/resourceGroups/',  resourceGroup().name, '/providers/Microsoft.Compute/virtualMachineScaleSets/', parameters('vmssName'))]",
             "enabled": true,
             "profiles": [
               {
@@ -166,7 +166,7 @@
                     "metricTrigger": {
                       "metricName": "\\Processor\\PercentProcessorTime",
                       "metricNamespace": "",
-                      "metricResourceUri": "[concat('/subscriptions/',subscription().subscriptionId, '/resourceGroups/',  resourceGroup().name, '/providers/Microsoft.Compute/virtualMachineScaleSets/', parameters('vmSSName'))]",
+                      "metricResourceUri": "[concat('/subscriptions/',subscription().subscriptionId, '/resourceGroups/',  resourceGroup().name, '/providers/Microsoft.Compute/virtualMachineScaleSets/', parameters('vmssName'))]",
                       "timeGrain": "PT1M",
                       "statistic": "Average",
                       "timeWindow": "PT5M",
@@ -189,7 +189,7 @@
         {
             "type": "Microsoft.Compute/virtualMachineScaleSets",
             "apiVersion": "2015-06-15",
-            "name": "[parameters('vmSSName')]",
+            "name": "[parameters('vmssName')]",
             "location": "[parameters('resourceLocation')]",
             "dependsOn": [
                 "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]",
@@ -217,7 +217,7 @@
                         }
                     },
                     "osProfile": {
-                        "computerNamePrefix": "[parameters('vmSSName')]",
+                        "computerNamePrefix": "[parameters('vmssName')]",
                         "adminUsername": "[parameters('adminUsername')]",
                         "adminPassword": "[parameters('adminPassword')]"
                     },
@@ -245,3 +245,4 @@
             }
         }
     ]
+}
